@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aodı-MeshAI — لوحة العقل المدبر</title>
+<style>
+:root{--bg:#0d1017;--card:#161a23;--line:#242a36;--txt:#e8eaed;--sub:#96a0b0;
+--ok:#22c55e;--warn:#f0b429;--bad:#ef4444;--acc:#22c55e;--cyn:#38bdf8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI",Tahoma,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:var(--card);border-bottom:1px solid var(--line)}
+h1{font-size:18px}h1 span{color:var(--acc)}
+main{max-width:1020px;margin:0 auto;padding:22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h3{font-size:12px;color:var(--sub);margin-bottom:8px;font-weight:600}
+.v{font-size:20px;font-weight:700}
+.pill{display:inline-block;font-size:11px;border-radius:99px;padding:3px 10px;border:1px solid var(--line);margin:2px}
+.pill.easy{color:var(--ok)}.pill.medium{color:var(--warn)}.pill.hard{color:var(--cyn)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+textarea,input{background:#10131a;border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:9px 12px;font-size:13px;width:100%}
+textarea{min-height:74px;resize:vertical}
+button{background:var(--acc);color:#07110a;border:0;padding:9px 16px;border-radius:9px;font-weight:700;cursor:pointer;font-size:13px}
+.btn2{background:#283042;color:var(--txt)}
+.task{border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0;background:var(--card);font-size:13px}
+.attempt{font-size:12px;color:var(--sub)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+pre{white-space:pre-wrap;word-break:break-word;font-size:12px;background:#0f1117;border-radius:8px;padding:10px;margin-top:6px}
+footer{color:var(--sub);font-size:12px;text-align:center;padding:18px}
+a{color:var(--acc);text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Aodı-<span>MeshAI</span> — لوحة العقل المدبّر</h1>
+  <div id="ver" style="color:var(--sub);font-size:12px"></div>
+</header>
+<main>
+  <div class="grid">
+    <div class="card"><h3>عقد الشبكة الصحيحة</h3><div class="v" id="fleet">–</div></div>
+    <div class="card"><h3>مهام نجمية ناجحة</h3><div class="v" id="done">–</div></div>
+    <div class="card"><h3>إصلاح ذاتي نشط</h3><div class="v" id="repairing">–</div></div>
+    <div class="card"><h3>متوسط محاولات</h3><div class="v" id="avgAtt">–</div></div>
+  </div>
+
+  <div class="card">
+    <h3>مهمة جديدة</h3>
+    <textarea id="prompt" placeholder="مثال: اكتب دالة بايثون تعيد مجموع قائمة أعداد صحيحة"></textarea>
+    <div class="row">
+      <input id="harness" placeholder="(اختياري) أداة اختبار: assert ... مثال: assert f([1,2,3])==6">
+      <button onclick="submit()">إرسال للشبكة</button>
+      <button class="btn2" onclick="load()">تحديث</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px"><h3>المهام — دورة التعافي الذاتي</h3><div id="tasks">—</div></div>
+</main>
+<footer>Aodı-MeshAI v1.0.0 · MIT © 2026 Baran Avisat · <a href="mailto:baranavisat@gmail.com">baranavisat@gmail.com</a> · <a href="https://wa.me/905313263722">WhatsApp +90 531 326 37 22</a></footer>
+<script>
+const API = location.origin;
+async function j(u, b){
+  const r = await fetch(u, b ? {method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(b)} : undefined);
+  return r.json();
+}
+function esc(s){const d=document.createElement("div");d.textContent=String(s||"");return d.innerHTML;}
+async function load(){
+  const h = await j(API + "/api/health").catch(()=>null);
+  if (!h) return;
+  document.getElementById("ver").textContent = h.brand + " v" + h.version;
+  const fl = h.fleet || [];
+  document.getElementById("fleet").textContent =
+    fl.filter(n=>n.ok).length + " / " + fl.length;
+  const t = (await j(API + "/api/tasks")).tasks || [];
+  const done = t.filter(x=>x.status==="done");
+  const mid = t.filter(x=>x.status==="running" && x.attempts>1);
+  const avg = done.length? (done.reduce((a,x)=>a+(x.attempts||0),0)/done.length).toFixed(1) : "–";
+  document.getElementById("done").textContent = done.length;
+  document.getElementById("repairing").textContent = mid.length;
+  document.getElementById("avgAtt").textContent = avg;
+  document.getElementById("tasks").innerHTML = t.slice(0,12).map(x => `
+    <div class="task">
+      <span class="pill ${x.tier}">${x.tier?x.tier.toUpperCase():""}</span>
+      <b>${esc((x.prompt||"").slice(0,80))}</b>
+      <div class="attempt">${x.status==="done"?'<span class="ok">✓ نظيف</span>':x.status==="failed"?'<span class="bad">✗ فشل</span>':'<span class="warn">⏳ جارٍ</span>'}
+      ${x.attempts?` · محاولة ${x.attempts}`:""} ${x.model?` · ${esc(x.model)}@${esc(x.node||"")}`:""}</div>
+      ${(x.attempts_log||[]).map(a=>`<div class="attempt">${a.ok?"✓":"✗"} محاولة ${a.attempt} · exit ${a.exit} · ${a.ms}ms ${a.err?`· ${esc(a.err.slice(0,90))}`:""}</div>`).join("")}
+      ${x.status==="done" && x.code ? `<pre>${esc(x.code)}</pre>`:""}
+    </div>`).join("");
+}
+async function submit(){
+  const p = document.getElementById("prompt").value.trim();
+  if (!p) return alert("اكتب المهمة");
+  document.getElementById("prompt").value = "";
+  await j(API + "/api/task", {prompt: p, test_harness: document.getElementById("harness").value.trim() || null});
+  load();
+}
+load(); setInterval(load, 4000);
+</script>
+</body>
+</html>
